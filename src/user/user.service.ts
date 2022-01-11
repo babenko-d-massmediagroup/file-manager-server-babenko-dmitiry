@@ -24,4 +24,16 @@ export class UserService {
   findOneByUsername(username: string) {
     return this.userModel.findOne({ username });
   }
+
+  async addImage(userId: string, imageId: string) {
+    // const user = await this.userModel.findById(userId)
+    return this.userModel.findOneAndUpdate(
+      // { id: userId },
+      // { images: [imageId] },
+      // { new: true },
+      { id: userId },
+      { $push: { images: imageId } },
+      { new: true },
+    );
+  }
 }
