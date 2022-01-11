@@ -18,6 +18,7 @@ export class GridFsMulterConfigService implements MulterOptionsFactory {
       url: configService.get<string>('MONGO_URL'),
 
       file: async (req, file) => {
+        console.log({ req, file });
         const comment = req.query.comment ? req.query.comment.toString() : '';
         const deleteDate = req.query.deleteDate
           ? req.query.deleteDate.toString()

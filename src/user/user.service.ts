@@ -36,4 +36,8 @@ export class UserService {
       { new: true },
     );
   }
+
+  findOneById(id: string) {
+    return this.userModel.findById(id);
+  }
 }

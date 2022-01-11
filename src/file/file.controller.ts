@@ -20,37 +20,57 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserService } from 'src/user/user.service';
 import { FileInfoService } from 'src/file-info/file-info.service';
 
-@Controller('/image')
+@Controller('image')
 export class FileController {
   constructor(
     private fileService: FileService,
     private userService: UserService,
     private fileInfoService: FileInfoService,
   ) {}
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('plain-all')
+  async receiveFiles(@Req() req) {
+    const files = await this.fileService.receiveFiles(req.user.id);
+
+    return files;
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('count')
+  async count(@Req() req): Promise<number> {
+    const count = await this.fileService.count(req.user.id);
+
+    return count;
+  }
+
   @UseGuards(AuthGuard('jwt'))
   @Post('')
   @UseInterceptors(FilesInterceptor('file'))
   async upload(@Req() req, @UploadedFiles() files) {
     const response = [];
-    files.forEach(async (file) => {
-      const img = await this.userService.addImage(req.user.id, file.id);
+    console.log('FILES', files);
+    files &&
+      files.length &&
+      files.forEach(async (file) => {
+        const img = await this.userService.addImage(req.user.id, file.id);
 
-      const fileReponse = {
-        originalname: file.originalname,
-        encoding: file.encoding,
-        mimetype: file.mimetype,
-        id: file.id,
-        filename: file.filename,
-        metadata: file.metadata,
-        bucketName: file.bucketName,
-        chunkSize: file.chunkSize,
-        size: file.size,
-        md5: file.md5,
-        uploadDate: file.uploadDate,
-        contentType: file.contentType,
-      };
-      response.push(fileReponse);
-    });
+        const fileReponse = {
+          originalname: file.originalname,
+          encoding: file.encoding,
+          mimetype: file.mimetype,
+          id: file.id,
+          filename: file.filename,
+          metadata: file.metadata,
+          bucketName: file.bucketName,
+          chunkSize: file.chunkSize,
+          size: file.size,
+          md5: file.md5,
+          uploadDate: file.uploadDate,
+          contentType: file.contentType,
+        };
+        response.push(fileReponse);
+      });
     return response;
   }
 
