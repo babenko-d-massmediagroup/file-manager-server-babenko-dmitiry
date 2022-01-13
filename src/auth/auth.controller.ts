@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Body,
+  Get,
   HttpException,
   HttpStatus,
   UseGuards,
@@ -12,13 +13,21 @@ import { AuthGuard } from '@nestjs/passport';
 import { UtilsService } from '../utils/utils.service';
 import { AuthService } from './auth.service';
 import { LoginUserDto, RegisterUserDto } from './dto/auth.dto';
+import { JwtStrategy } from './jwt.strategy';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly utils: UtilsService,
+    private jwtStrategy: JwtStrategy,
   ) {}
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('validateToken')
+  async validateToken() {
+    return { status: 'valid' };
+  }
 
   @UsePipes(new ValidationPipe({ skipMissingProperties: false }))
   @Post('register')

@@ -71,7 +71,8 @@ export class FileController {
         };
         response.push(fileReponse);
       });
-    return response;
+
+    return files[0];
   }
 
   @Get('info/:id')
