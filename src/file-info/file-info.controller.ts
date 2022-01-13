@@ -1,7 +1,4 @@
-import { Controller } from '@nestjs/common';
-import { FileInfoService } from './file-info.service';
+import { Controller, forwardRef, Get, Inject, Param } from '@nestjs/common';
 
 @Controller('file-info')
-export class FileInfoController {
-  constructor(private readonly fileInfoService: FileInfoService) {}
-}
+export class FileInfoController {}

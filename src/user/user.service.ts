@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UserDto } from './dto/user.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './entities/user.entity';
 
 @Injectable()
@@ -26,11 +26,7 @@ export class UserService {
   }
 
   async addImage(userId: string, imageId: string) {
-    // const user = await this.userModel.findById(userId)
     return this.userModel.findOneAndUpdate(
-      // { id: userId },
-      // { images: [imageId] },
-      // { new: true },
       { id: userId },
       { $push: { images: imageId } },
       { new: true },
@@ -39,5 +35,16 @@ export class UserService {
 
   findOneById(id: string) {
     return this.userModel.findById(id);
+  }
+
+  remove(id: string, fileId: string) {
+    return this.userModel.updateOne(
+      { id },
+      {
+        $pullAll: {
+          images: [Types.ObjectId.createFromHexString(fileId)],
+        },
+      },
+    );
   }
 }

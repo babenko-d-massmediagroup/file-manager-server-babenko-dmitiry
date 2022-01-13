@@ -15,6 +15,9 @@ export class FileInfo {
 
   @Expose()
   contentType: string;
+
+  @Expose()
+  fileInfo: string;
 }
 
 export class FileResponse {
