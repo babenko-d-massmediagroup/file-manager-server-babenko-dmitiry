@@ -7,7 +7,6 @@ export class AuthUserDto {
 
   @IsNotEmpty()
   @IsString()
-  @Min(4)
   password: string;
 }
 export class RegisterUserDto extends AuthUserDto {}
