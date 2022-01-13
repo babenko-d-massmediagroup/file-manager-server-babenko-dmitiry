@@ -29,6 +29,22 @@ export class FileController {
   ) {}
 
   @UseGuards(AuthGuard('jwt'))
+  @Get('full-info/:fileId')
+  async getCommentsAndDeleteDate(@Param('fileId') fileId: string) {
+    const commentDeleteInfo =
+      await this.fileService.getCommentAndDeleteDateInfo(fileId);
+    const file = await this.fileService.findInfo(fileId);
+
+    const info = {
+      comment: commentDeleteInfo.comment,
+      deleteDate: commentDeleteInfo.deleteDate,
+      filename: file.filename,
+    };
+
+    return info;
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Get('plain-all')
   async receiveFiles(@Req() req) {
     const files = await this.fileService.receiveFiles(req.user.id);
@@ -49,7 +65,6 @@ export class FileController {
   @UseInterceptors(FilesInterceptor('file'))
   async upload(@Req() req, @UploadedFiles() files) {
     const response = [];
-    console.log('FILES', files);
     files &&
       files.length &&
       files.forEach(async (file) => {
@@ -126,17 +141,15 @@ export class FileController {
     return filestream.pipe(res);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Delete('delete/:id')
-  async deleteFile(@Param('id') id: string) {
+  async deleteFile(@Param('id') id: string, @Req() req) {
     const file = await this.fileService.findInfo(id);
-    const filestream = await this.fileService.deleteFile(id);
+    const deleteFileInUser = await this.userService.remove(req.user.id, id);
 
-    if (!filestream) {
-      throw new HttpException(
-        'An error occurred during file deletion',
-        HttpStatus.EXPECTATION_FAILED,
-      );
-    }
+    const deleteFileInfo = await this.fileInfoService.remove(file.fileInfo);
+
+    await this.fileService.deleteFile(id);
 
     return {
       message: 'File has been deleted',

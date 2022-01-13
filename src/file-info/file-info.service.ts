@@ -14,4 +14,12 @@ export class FileInfoService {
   async createInfo(data: CreateInfoDto) {
     return this.fileInfoModel.create(data);
   }
+
+  async getInfo(fileInfoId: string) {
+    return this.fileInfoModel.findById(fileInfoId);
+  }
+
+  async remove(id: string) {
+    return this.fileInfoModel.findByIdAndRemove(id, { new: true });
+  }
 }

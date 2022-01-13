@@ -31,5 +31,6 @@ import { FileInfoService } from 'src/file-info/file-info.service';
   ],
   controllers: [FileController],
   providers: [FileService, GridFsMulterConfigService, JwtStrategy],
+  exports: [FileService],
 })
 export class FileModule {}

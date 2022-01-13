@@ -1,18 +1,19 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { MongoGridFS } from 'mongo-gridfs';
-import { Connection } from 'mongoose';
+import { Connection, Types } from 'mongoose';
 import { GridFSBucketReadStream } from 'mongodb';
 import { FileInfo } from './file.dto';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
+import { FileInfoService } from '../file-info/file-info.service';
 
 @Injectable()
 export class FileService {
   private fileModel: MongoGridFS;
-
   constructor(
     @InjectConnection() private readonly connection: Connection,
     private readonly userService: UserService,
+    private readonly fileInfoService: FileInfoService,
   ) {
     this.fileModel = new MongoGridFS(this.connection.db, 'fs');
   }
@@ -34,11 +35,24 @@ export class FileService {
       chunkSize: result.chunkSize,
       md5: result.md5,
       contentType: result.contentType,
+      fileInfo: result.metadata['fileInfo'],
     };
   }
 
-  async deleteFile(id: string): Promise<boolean> {
-    return await this.fileModel.delete(id);
+  async deleteFile(id: string) {
+    try {
+      await this.connection.db
+        .collection('fs.files')
+        .findOneAndDelete({ _id: Types.ObjectId.createFromHexString(id) });
+      await this.connection.db
+        .collection('fs.chunks')
+        .findOneAndDelete({ files_id: Types.ObjectId.createFromHexString(id) });
+    } catch (e) {
+      throw new HttpException(
+        'An error occurred during file deletion',
+        HttpStatus.EXPECTATION_FAILED,
+      );
+    }
   }
 
   async receiveFiles(userId: string) {
@@ -48,21 +62,16 @@ export class FileService {
       throw new HttpException('User does not exist', HttpStatus.BAD_REQUEST);
     }
 
-    const files = await this.fileModel.find({
-      _id: {
-        $in: user.images,
-      },
-    });
-
-    console.log({ files });
+    const files = await this.connection.db
+      .collection('fs.files')
+      .find({ _id: { $in: user.images } }, { sort: { uploadDate: -1 } })
+      .toArray();
 
     return files;
   }
 
   async count(userId: string) {
     const user = await this.userService.findOneById(userId);
-
-    console.log('suer', user);
 
     if (!user) {
       throw new HttpException(
@@ -72,5 +81,29 @@ export class FileService {
     }
 
     return user.images.length;
+  }
+
+  async getCommentAndDeleteDateInfo(fileId: string) {
+    const file = await this.fileModel.findById(fileId);
+
+    if (!file) {
+      throw new HttpException(
+        'File does not exist. C02',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const additionalInfo = await this.fileInfoService.getInfo(
+      file.metadata['fileInfo'] as string,
+    );
+
+    if (!additionalInfo) {
+      throw new HttpException(
+        'File info does not exist. C03',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return additionalInfo;
   }
 }
