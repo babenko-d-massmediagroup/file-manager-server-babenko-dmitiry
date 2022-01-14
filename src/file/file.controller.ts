@@ -20,6 +20,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserService } from 'src/user/user.service';
 import { FileInfoService } from 'src/file-info/file-info.service';
 import { LinkService } from 'src/link/link.service';
+import { StatisticService } from 'src/statistic/statistic.service';
 
 @Controller('image')
 export class FileController {
@@ -28,6 +29,7 @@ export class FileController {
     private userService: UserService,
     private fileInfoService: FileInfoService,
     private linkService: LinkService,
+    private statisticService: StatisticService,
   ) {}
 
   @UseGuards(AuthGuard('jwt'))
@@ -153,6 +155,12 @@ export class FileController {
   async deleteFile(@Param('id') id: string, @Req() req) {
     const file = await this.fileService.findById(id);
     const deleteFileInUser = await this.userService.remove(req.user.id, id);
+
+    const user = await this.userService.findOneById(req.user.id);
+
+    const addToStatistic = await this.statisticService.addDeletedFiles(
+      user.static.toString(),
+    );
 
     const deleteFileInfo = await this.fileInfoService.remove(
       file.metadata['fileInfo'],

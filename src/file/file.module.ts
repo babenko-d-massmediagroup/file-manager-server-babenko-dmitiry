@@ -11,9 +11,11 @@ import { FileInfoModule } from 'src/file-info/file-info.module';
 import { FileInfoService } from 'src/file-info/file-info.service';
 import { LinkModule } from 'src/link/link.module';
 import { LinkService } from 'src/link/link.service';
+import { StatisticModule } from 'src/statistic/statistic.module';
 
 @Module({
   imports: [
+    StatisticModule,
     ConfigModule,
     MulterModule.registerAsync({
       imports: [ConfigModule, FileInfoModule, LinkModule],

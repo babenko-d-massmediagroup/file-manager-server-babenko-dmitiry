@@ -35,11 +35,19 @@ export class LinkService {
     await this.fileService.addWatchedTimes(id);
   }
 
-  async generateTokens({ count, fileId }: { count: number; fileId: string }) {
+  async generateTokens({
+    count,
+    fileId,
+    userId,
+  }: {
+    count: number;
+    fileId: string;
+    userId: string;
+  }) {
     const tokens: string[] = [];
 
     for (let i = 0; i < count; i++) {
-      tokens.push(this.jwtService.sign({ id: uuidv4(), fileId }));
+      tokens.push(this.jwtService.sign({ id: uuidv4(), fileId, userId }));
     }
 
     const tokenModelId: string = await this.fileService.getTokensModelId(
