@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { UtilsModule } from './utils/utils.module';
 import { FileModule } from './file/file.module';
 import { FileInfoModule } from './file-info/file-info.module';
+import { LinkModule } from './link/link.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { FileInfoModule } from './file-info/file-info.module';
     UtilsModule,
     FileModule,
     FileInfoModule,
+    LinkModule,
   ],
   controllers: [AppController],
   providers: [AppService],

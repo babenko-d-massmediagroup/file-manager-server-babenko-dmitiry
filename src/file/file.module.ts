@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { FileService } from './file.service';
 import { FileController } from './file.controller';
 import { MulterModule } from '@nestjs/platform-express';
@@ -9,14 +9,16 @@ import { JwtStrategy } from '../auth/jwt.strategy';
 import { UserModule } from 'src/user/user.module';
 import { FileInfoModule } from 'src/file-info/file-info.module';
 import { FileInfoService } from 'src/file-info/file-info.service';
+import { LinkModule } from 'src/link/link.module';
+import { LinkService } from 'src/link/link.service';
 
 @Module({
   imports: [
     ConfigModule,
     MulterModule.registerAsync({
-      imports: [ConfigModule, FileInfoModule],
+      imports: [ConfigModule, FileInfoModule, LinkModule],
       useClass: GridFsMulterConfigService,
-      inject: [ConfigService, FileInfoService],
+      inject: [ConfigService, FileInfoService, LinkService],
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -28,6 +30,7 @@ import { FileInfoService } from 'src/file-info/file-info.service';
     }),
     UserModule,
     FileInfoModule,
+    forwardRef(() => LinkModule),
   ],
   controllers: [FileController],
   providers: [FileService, GridFsMulterConfigService, JwtStrategy],

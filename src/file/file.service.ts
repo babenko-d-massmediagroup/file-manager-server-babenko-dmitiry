@@ -36,6 +36,8 @@ export class FileService {
       md5: result.md5,
       contentType: result.contentType,
       fileInfo: result.metadata['fileInfo'],
+      watchedTimes: result.metadata['watchedTimes'],
+      isActiveLink: result.metadata['isActiveLink'],
     };
   }
 
@@ -105,5 +107,58 @@ export class FileService {
     }
 
     return additionalInfo;
+  }
+
+  async isActiveLink(id: string): Promise<boolean> {
+    try {
+      const file = await this.fileModel.findById(id);
+
+      return file.metadata['isActiveLink'];
+    } catch (e) {
+      throw new HttpException(
+        'File does not exist C04',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  async addWatchedTimes(id: string) {
+    const file = await this.fileModel.findById(id);
+
+    const updatedFile = await this.connection.db
+      .collection('fs.files')
+      .findOneAndUpdate(
+        { _id: file._id },
+        {
+          $set: {
+            'metadata.watchedTimes': file.metadata['watchedTimes'] + 1,
+          },
+        },
+      );
+  }
+
+  setPhotoLinkStatus(id: string, status: boolean) {
+    return this.connection.db.collection('fs.files').findOneAndUpdate(
+      { _id: Types.ObjectId.createFromHexString(id) },
+      {
+        $set: {
+          'metadata.isActiveLink': status,
+        },
+      },
+    );
+  }
+
+  async getTokensModelId(fileId: string) {
+    try {
+      const file = await this.fileModel.findById(fileId);
+
+      if (!file) {
+        throw new Error('Error here 2');
+      }
+
+      return file.metadata['tokens'];
+    } catch (e) {
+      throw new Error('Error here');
+    }
   }
 }

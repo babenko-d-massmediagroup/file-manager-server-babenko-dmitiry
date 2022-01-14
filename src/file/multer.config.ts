@@ -6,6 +6,7 @@ import {
 } from '@nestjs/platform-express';
 import * as GridFsStorage from 'multer-gridfs-storage';
 import { FileInfoService } from 'src/file-info/file-info.service';
+import { LinkService } from 'src/link/link.service';
 
 @Injectable()
 export class GridFsMulterConfigService implements MulterOptionsFactory {
@@ -13,6 +14,7 @@ export class GridFsMulterConfigService implements MulterOptionsFactory {
   constructor(
     private configService: ConfigService,
     private fileInfoService: FileInfoService,
+    private linkService: LinkService,
   ) {
     this.gridFsStorage = new GridFsStorage.GridFsStorage({
       url: configService.get<string>('MONGO_URL'),
@@ -28,6 +30,8 @@ export class GridFsMulterConfigService implements MulterOptionsFactory {
           deleteDate,
         });
 
+        // const tokensArrayId = await this.linkService.createTokensArrayAndReturnId()
+
         return new Promise((resolve, reject) => {
           const filename = file.originalname.trim();
 
@@ -36,6 +40,9 @@ export class GridFsMulterConfigService implements MulterOptionsFactory {
             metadata: {
               userId: req.user.id,
               fileInfo: fileComment.id,
+              watchedTimes: 0,
+              isActiveLink: false,
+              tokens: [],
             },
           };
           resolve(fileInfo);
