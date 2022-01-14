@@ -19,6 +19,7 @@ import { FileResponse } from './file.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UserService } from 'src/user/user.service';
 import { FileInfoService } from 'src/file-info/file-info.service';
+import { LinkService } from 'src/link/link.service';
 
 @Controller('image')
 export class FileController {
@@ -26,6 +27,7 @@ export class FileController {
     private fileService: FileService,
     private userService: UserService,
     private fileInfoService: FileInfoService,
+    private linkService: LinkService,
   ) {}
 
   @UseGuards(AuthGuard('jwt'))
@@ -35,12 +37,14 @@ export class FileController {
       await this.fileService.getCommentAndDeleteDateInfo(fileId);
     const file = await this.fileService.findInfo(fileId);
 
+    const fileInfo = await this.fileInfoService.findById(file.fileInfo);
+
     const info = {
       comment: commentDeleteInfo.comment,
       deleteDate: commentDeleteInfo.deleteDate,
       filename: file.filename,
-      watchedTimes: file.watchedTimes,
-      isActiveLink: file.isActiveLink,
+      watchedTimes: fileInfo.watchedTimes,
+      isActiveLink: fileInfo.isActiveLink,
       link: `http://localhost:3000/watch/${fileId}`,
     };
 
@@ -147,11 +151,15 @@ export class FileController {
   @UseGuards(AuthGuard('jwt'))
   @Delete('delete/:id')
   async deleteFile(@Param('id') id: string, @Req() req) {
-    const file = await this.fileService.findInfo(id);
+    const file = await this.fileService.findById(id);
     const deleteFileInUser = await this.userService.remove(req.user.id, id);
 
-    const deleteFileInfo = await this.fileInfoService.remove(file.fileInfo);
-
+    const deleteFileInfo = await this.fileInfoService.remove(
+      file.metadata['fileInfo'],
+    );
+    const deleteTemporaryLinks = await this.linkService.removeTemporaryLinks(
+      file.metadata['tokens'],
+    );
     await this.fileService.deleteFile(id);
 
     return {

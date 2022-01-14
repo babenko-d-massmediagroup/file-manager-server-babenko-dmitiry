@@ -9,6 +9,7 @@ import { UtilsModule } from './utils/utils.module';
 import { FileModule } from './file/file.module';
 import { FileInfoModule } from './file-info/file-info.module';
 import { LinkModule } from './link/link.module';
+import { StatisticModule } from './statistic/statistic.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { LinkModule } from './link/link.module';
     FileModule,
     FileInfoModule,
     LinkModule,
+    StatisticModule,
   ],
   controllers: [AppController],
   providers: [AppService],

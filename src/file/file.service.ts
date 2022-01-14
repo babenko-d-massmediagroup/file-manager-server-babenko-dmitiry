@@ -17,6 +17,10 @@ export class FileService {
   ) {
     this.fileModel = new MongoGridFS(this.connection.db, 'fs');
   }
+  findById(id: string) {
+    //!
+    return this.fileModel.findById(id);
+  }
 
   async readStream(id: string): Promise<GridFSBucketReadStream> {
     return await this.fileModel.readFileStream(id);
@@ -29,15 +33,22 @@ export class FileService {
         throw new HttpException('File not found', HttpStatus.NOT_FOUND);
       })
       .then((result) => result);
+
+    //!check for file info
+
+    const fileInfo = await this.fileInfoService.findById(
+      result.metadata['fileInfo'] as string,
+    );
     return {
       filename: result.filename,
       length: result.length,
       chunkSize: result.chunkSize,
       md5: result.md5,
       contentType: result.contentType,
+      //!
       fileInfo: result.metadata['fileInfo'],
-      watchedTimes: result.metadata['watchedTimes'],
-      isActiveLink: result.metadata['isActiveLink'],
+      watchedTimes: fileInfo.watchedTimes,
+      isActiveLink: fileInfo.isActiveLink,
     };
   }
 
@@ -95,6 +106,8 @@ export class FileService {
       );
     }
 
+    //!check
+
     const additionalInfo = await this.fileInfoService.getInfo(
       file.metadata['fileInfo'] as string,
     );
@@ -113,7 +126,10 @@ export class FileService {
     try {
       const file = await this.fileModel.findById(id);
 
-      return file.metadata['isActiveLink'];
+      const fileInfo = await this.fileInfoService.findById(
+        file.metadata['fileInfo'],
+      );
+      return fileInfo.isActiveLink;
     } catch (e) {
       throw new HttpException(
         'File does not exist C04',
@@ -125,26 +141,16 @@ export class FileService {
   async addWatchedTimes(id: string) {
     const file = await this.fileModel.findById(id);
 
-    const updatedFile = await this.connection.db
-      .collection('fs.files')
-      .findOneAndUpdate(
-        { _id: file._id },
-        {
-          $set: {
-            'metadata.watchedTimes': file.metadata['watchedTimes'] + 1,
-          },
-        },
-      );
+    return this.fileInfoService.addWatchedTimes(
+      file.metadata['fileInfo'] as string,
+    );
   }
 
-  setPhotoLinkStatus(id: string, status: boolean) {
-    return this.connection.db.collection('fs.files').findOneAndUpdate(
-      { _id: Types.ObjectId.createFromHexString(id) },
-      {
-        $set: {
-          'metadata.isActiveLink': status,
-        },
-      },
+  async setPhotoLinkStatus(id: string, status: boolean) {
+    const file = await this.fileModel.findById(id);
+    return this.fileInfoService.changeActiveLinkStatus(
+      file.metadata['fileInfo'],
+      status,
     );
   }
 

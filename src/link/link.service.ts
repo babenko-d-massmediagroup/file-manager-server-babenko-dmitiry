@@ -13,7 +13,7 @@ export class LinkService {
   constructor(
     private readonly fileService: FileService,
     @InjectModel(TemporaryLink.name)
-    private tokensModel: Model<TemporaryLinkDocument>,
+    private temporaryLinkModel: Model<TemporaryLinkDocument>,
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
   ) {}
@@ -52,7 +52,6 @@ export class LinkService {
   }
 
   addTokens(tokensId: string, tokens: string[]) {
-    console.log({ tokens });
     const params = {
       $push: {
         tokens: {
@@ -60,22 +59,21 @@ export class LinkService {
         },
       },
     };
-    return this.tokensModel.findByIdAndUpdate(tokensId, params);
+    return this.temporaryLinkModel.findByIdAndUpdate(tokensId, params);
   }
 
   createTokensArrayAndReturnId() {
-    const tokenMode = new this.tokensModel({ tokens: [] });
+    const tokenMode = new this.temporaryLinkModel({
+      tokens: [],
+      usedTokens: 0,
+    });
     return tokenMode.save();
   }
 
   async getAllTemporaryTokens(userId: string, fileId: string) {
     const user = await this.userService.findOneById(userId);
 
-    // const objectId = Types.ObjectId.createFromHexString(fileId)
-
     const usersImages = user.images.map((item) => item.toString());
-
-    console.log({ usersImages, fileId });
 
     if (!usersImages.includes(fileId)) {
       throw new Error('Error here 3');
@@ -83,7 +81,7 @@ export class LinkService {
 
     const tokensId = await this.fileService.getTokensId(fileId);
 
-    const tokensArray = await this.tokensModel.findById(tokensId);
+    const tokensArray = await this.temporaryLinkModel.findById(tokensId);
 
     return tokensArray.tokens;
   }
@@ -94,14 +92,15 @@ export class LinkService {
 
   async isTokenExist(fileId: string, token: string) {
     const tokensId = await this.fileService.getTokensId(fileId);
-    const tokensArray = await this.tokensModel.findById(tokensId);
+    const tlModel = await this.temporaryLinkModel.findById(tokensId);
 
-    console.log({ tokenArrayValue: tokensArray.tokens[0], token, tokensId });
-
-    if (tokensArray.tokens.includes(token)) {
-      await this.tokensModel.findByIdAndUpdate(tokensId, {
+    if (tlModel.tokens.includes(token)) {
+      await this.temporaryLinkModel.findByIdAndUpdate(tokensId, {
         $pullAll: {
           tokens: [token],
+        },
+        $set: {
+          usedTokens: tlModel.usedTokens + 1,
         },
       });
 
@@ -109,5 +108,9 @@ export class LinkService {
     }
 
     return false;
+  }
+
+  removeTemporaryLinks(id: string) {
+    return this.temporaryLinkModel.findByIdAndRemove(id);
   }
 }

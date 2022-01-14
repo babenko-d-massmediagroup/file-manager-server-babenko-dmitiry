@@ -7,6 +7,9 @@ export type TemporaryLinkDocument = TemporaryLink & Document;
 export class TemporaryLink {
   @Prop()
   tokens: [string];
+
+  @Prop()
+  usedTokens: number;
 }
 
 export const TemporaryLinkSchema = SchemaFactory.createForClass(TemporaryLink);
