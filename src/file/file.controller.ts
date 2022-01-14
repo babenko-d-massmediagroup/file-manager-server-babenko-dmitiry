@@ -39,6 +39,9 @@ export class FileController {
       comment: commentDeleteInfo.comment,
       deleteDate: commentDeleteInfo.deleteDate,
       filename: file.filename,
+      watchedTimes: file.watchedTimes,
+      isActiveLink: file.isActiveLink,
+      link: `http://localhost:3000/watch/${fileId}`,
     };
 
     return info;

@@ -18,6 +18,12 @@ export class FileInfo {
 
   @Expose()
   fileInfo: string;
+
+  @Expose()
+  watchedTimes: number;
+
+  @Expose()
+  isActiveLink: boolean;
 }
 
 export class FileResponse {
