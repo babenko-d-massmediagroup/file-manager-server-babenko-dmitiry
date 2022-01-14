@@ -8,11 +8,15 @@ import { TemporaryLink, TemporaryLinkSchema } from './temporary-link.entity';
 import { UserModule } from 'src/user/user.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { StatisticModule } from 'src/statistic/statistic.module';
+import { UserService } from 'src/user/user.service';
 
 @Module({
   imports: [
     UserModule,
     UtilsModule,
+    StatisticModule,
+    UserModule,
     forwardRef(() => FileModule),
     MongooseModule.forFeature([
       { name: TemporaryLink.name, schema: TemporaryLinkSchema },

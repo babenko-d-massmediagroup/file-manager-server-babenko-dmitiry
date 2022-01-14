@@ -3,13 +3,23 @@ import { UserDto } from './dto/user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './entities/user.entity';
+import { StatisticService } from 'src/statistic/statistic.service';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly statisticService: StatisticService,
+  ) {}
   async createUser(userDto: UserDto) {
+    const statistic = await this.statisticService.createStatistic({
+      deleteFiles: 0,
+      usedTemporaryLinks: 0,
+    });
+
     const userSchema = new this.userModel({
       ...userDto,
+      static: statistic._id,
     });
 
     const user = await userSchema.save();
