@@ -161,4 +161,16 @@ export class FileService {
       throw new Error('Error here');
     }
   }
+
+  async getTokensId(fileId: string) {
+    try {
+      const file = await this.fileModel.findById(fileId);
+
+      return file.metadata['tokens']
+        ? (file.metadata['tokens'] as string)
+        : null;
+    } catch (e) {
+      throw new Error('handle error here');
+    }
+  }
 }
