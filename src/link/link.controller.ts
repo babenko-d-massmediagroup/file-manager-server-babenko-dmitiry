@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  HttpException,
   Param,
   Post,
   Query,
@@ -48,6 +50,41 @@ export class LinkController {
   async generateTemporaryToken(
     @Body() body: { count: number; fileId: string },
   ) {
-    const tokens = this.linkService.generateTokens(body);
+    const tokens = await this.linkService.generateTokens(body);
+
+    return tokens;
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('get-all-temporary-tokens/:fileId')
+  async getAllTemporaryTokens(@Req() req, @Param('fileId') fileId: string) {
+    const tokens = await this.linkService.getAllTemporaryTokens(
+      req.user.id,
+      fileId,
+    );
+
+    return tokens;
+  }
+
+  @Get('get-from-token/:token')
+  async getImageFromToken(@Param('token') token: string) {
+    const payload = this.linkService.getPhotoIdFromToken(token);
+
+    const { id, fileId }: { id: string; fileId: string } = payload;
+
+    console.log({ payload });
+
+    const isTokenExist = await this.linkService.isTokenExist(fileId, token);
+
+    if (!isTokenExist) {
+      throw new HttpException('Token does not exist', 404);
+    }
+
+    const file = await this.fileService.findInfo(fileId);
+
+    return {
+      filename: file.filename,
+      imageUrl: `http://localhost:4000/image/${fileId}`,
+    };
   }
 }

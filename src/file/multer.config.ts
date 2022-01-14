@@ -30,7 +30,8 @@ export class GridFsMulterConfigService implements MulterOptionsFactory {
           deleteDate,
         });
 
-        // const tokensArrayId = await this.linkService.createTokensArrayAndReturnId()
+        const tokenModel =
+          await this.linkService.createTokensArrayAndReturnId();
 
         return new Promise((resolve, reject) => {
           const filename = file.originalname.trim();
@@ -42,7 +43,7 @@ export class GridFsMulterConfigService implements MulterOptionsFactory {
               fileInfo: fileComment.id,
               watchedTimes: 0,
               isActiveLink: false,
-              tokens: [],
+              tokens: tokenModel._id,
             },
           };
           resolve(fileInfo);
