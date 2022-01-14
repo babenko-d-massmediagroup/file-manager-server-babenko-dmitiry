@@ -72,8 +72,6 @@ export class LinkController {
 
     const { id, fileId }: { id: string; fileId: string } = payload;
 
-    console.log({ payload });
-
     const isTokenExist = await this.linkService.isTokenExist(fileId, token);
 
     if (!isTokenExist) {

@@ -39,10 +39,7 @@ export class GridFsMulterConfigService implements MulterOptionsFactory {
           const fileInfo = {
             filename: filename,
             metadata: {
-              userId: req.user.id,
               fileInfo: fileComment.id,
-              watchedTimes: 0,
-              isActiveLink: false,
               tokens: tokenModel._id,
             },
           };
