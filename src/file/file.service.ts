@@ -1,4 +1,10 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { MongoGridFS } from 'mongo-gridfs';
 import { Connection, Types } from 'mongoose';
@@ -6,14 +12,16 @@ import { GridFSBucketReadStream } from 'mongodb';
 import { FileInfo } from './file.dto';
 import { UserService } from '../user/user.service';
 import { FileInfoService } from '../file-info/file-info.service';
+import { LinkService } from 'src/link/link.service';
 
 @Injectable()
 export class FileService {
   private fileModel: MongoGridFS;
   constructor(
     @InjectConnection() private readonly connection: Connection,
+    @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
-    private readonly fileInfoService: FileInfoService,
+    private readonly fileInfoService: FileInfoService, // private readonly linkService: LinkService,
   ) {
     this.fileModel = new MongoGridFS(this.connection.db, 'fs');
   }
@@ -21,6 +29,19 @@ export class FileService {
     //!
     return this.fileModel.findById(id);
   }
+
+  find(ids: Types.ObjectId[]) {
+    return this.fileModel.find(ids);
+  }
+
+  // async getTempLinksCount(images: Types.ObjectId[]) {
+  //   const files = await this.find(images);
+  //   const ids = files.map((file) => file.metadata['tokens']);
+
+  //   // const tokensModel = await this.linkService.find(ids);
+
+  //   // return tokensModel.reduce((prev, cur) => prev + cur.tokens.length, 0);
+  // }
 
   async readStream(id: string): Promise<GridFSBucketReadStream> {
     return await this.fileModel.readFileStream(id);

@@ -1,10 +1,15 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { FileService } from 'src/file/file.service';
 import { UserService } from 'src/user/user.service';
-import { UtilsService } from 'src/utils/utils.service';
 import { v4 as uuidv4 } from 'uuid';
 import { TemporaryLink, TemporaryLinkDocument } from './temporary-link.entity';
 
@@ -17,6 +22,10 @@ export class LinkService {
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
   ) {}
+
+  find(ids) {
+    return this.temporaryLinkModel.find(ids);
+  }
 
   setPhotoLinkStatus(id: string, status: boolean) {
     return this.fileService.setPhotoLinkStatus(id, status);

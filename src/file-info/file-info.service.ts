@@ -48,4 +48,8 @@ export class FileInfoService {
       },
     });
   }
+
+  find(ids) {
+    return this.fileInfoModel.find(ids);
+  }
 }

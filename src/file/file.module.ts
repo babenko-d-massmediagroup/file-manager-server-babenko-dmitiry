@@ -15,7 +15,7 @@ import { StatisticModule } from 'src/statistic/statistic.module';
 
 @Module({
   imports: [
-    StatisticModule,
+    forwardRef(() => StatisticModule),
     ConfigModule,
     MulterModule.registerAsync({
       imports: [ConfigModule, FileInfoModule, LinkModule],
@@ -30,7 +30,7 @@ import { StatisticModule } from 'src/statistic/statistic.module';
       }),
       inject: [ConfigService],
     }),
-    UserModule,
+    forwardRef(() => UserModule),
     FileInfoModule,
     forwardRef(() => LinkModule),
   ],
