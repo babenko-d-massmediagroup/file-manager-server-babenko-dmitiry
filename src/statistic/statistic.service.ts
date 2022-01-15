@@ -53,6 +53,15 @@ export class StatisticService {
     const user = await this.userService.findOneById(userId);
     const stat = await this.statisticModel.findById(user.static);
     const fileCount = await this.fileService.count(user.id);
-    const linkWatchedTimes = this.getLinkesWatchedTimes(user.images);
+    const linkWatchedTimes = await this.getLinkesWatchedTimes(user.images);
+    const tempLinkCount = await this.fileService.getTempLinksCount(user.images);
+
+    return {
+      deleteFiles: stat.deleteFiles,
+      usedTemporaryLinks: stat.usedTemporaryLinks,
+      fileCount,
+      linkWatchedTimes,
+      tempLinkCount,
+    };
   }
 }

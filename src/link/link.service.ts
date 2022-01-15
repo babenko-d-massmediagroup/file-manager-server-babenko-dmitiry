@@ -16,9 +16,11 @@ import { TemporaryLink, TemporaryLinkDocument } from './temporary-link.entity';
 @Injectable()
 export class LinkService {
   constructor(
+    @Inject(forwardRef(() => FileService))
     private readonly fileService: FileService,
     @InjectModel(TemporaryLink.name)
     private temporaryLinkModel: Model<TemporaryLinkDocument>,
+    @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
   ) {}

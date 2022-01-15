@@ -3,7 +3,7 @@ import { UserDto } from './dto/user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './entities/user.entity';
-import { StatisticService } from 'src/statistic/statistic.service';
+import { StatisticService } from '../statistic/statistic.service';
 
 @Injectable()
 export class UserService {

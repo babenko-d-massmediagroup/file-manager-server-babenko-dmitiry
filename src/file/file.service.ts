@@ -21,7 +21,8 @@ export class FileService {
     @InjectConnection() private readonly connection: Connection,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
-    private readonly fileInfoService: FileInfoService, // private readonly linkService: LinkService,
+    private readonly fileInfoService: FileInfoService,
+    private readonly linkService: LinkService,
   ) {
     this.fileModel = new MongoGridFS(this.connection.db, 'fs');
   }
@@ -31,17 +32,17 @@ export class FileService {
   }
 
   find(ids: Types.ObjectId[]) {
-    return this.fileModel.find(ids);
+    return this.fileModel.find({ _id: { $in: ids } });
   }
 
-  // async getTempLinksCount(images: Types.ObjectId[]) {
-  //   const files = await this.find(images);
-  //   const ids = files.map((file) => file.metadata['tokens']);
+  async getTempLinksCount(images: Types.ObjectId[]) {
+    const files = await this.find(images);
+    const ids = files.map((file) => file.metadata['tokens']);
 
-  //   // const tokensModel = await this.linkService.find(ids);
+    const tokensModel = await this.linkService.find(ids);
 
-  //   // return tokensModel.reduce((prev, cur) => prev + cur.tokens.length, 0);
-  // }
+    return tokensModel.reduce((prev, cur) => prev + cur.tokens.length, 0);
+  }
 
   async readStream(id: string): Promise<GridFSBucketReadStream> {
     return await this.fileModel.readFileStream(id);
