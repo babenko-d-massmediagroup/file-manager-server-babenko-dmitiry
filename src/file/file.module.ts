@@ -15,8 +15,11 @@ import { StatisticModule } from 'src/statistic/statistic.module';
 
 @Module({
   imports: [
-    forwardRef(() => StatisticModule),
     ConfigModule,
+    FileInfoModule,
+    forwardRef(() => StatisticModule),
+    forwardRef(() => UserModule),
+    forwardRef(() => LinkModule),
     MulterModule.registerAsync({
       imports: [ConfigModule, FileInfoModule, LinkModule],
       useClass: GridFsMulterConfigService,
@@ -30,9 +33,6 @@ import { StatisticModule } from 'src/statistic/statistic.module';
       }),
       inject: [ConfigService],
     }),
-    forwardRef(() => UserModule),
-    FileInfoModule,
-    forwardRef(() => LinkModule),
   ],
   controllers: [FileController],
   providers: [FileService, GridFsMulterConfigService, JwtStrategy],

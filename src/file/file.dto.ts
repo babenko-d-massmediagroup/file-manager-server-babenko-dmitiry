@@ -31,3 +31,12 @@ export class FileResponse {
 
   file: FileInfo;
 }
+
+export interface FullInfo {
+  comment: string;
+  deleteDate: string;
+  filename: string;
+  watchedTimes: number;
+  isActiveLink: boolean;
+  link: string;
+}

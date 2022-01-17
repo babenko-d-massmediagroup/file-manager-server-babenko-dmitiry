@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   MulterModuleOptions,
@@ -17,34 +17,44 @@ export class GridFsMulterConfigService implements MulterOptionsFactory {
     private linkService: LinkService,
   ) {
     this.gridFsStorage = new GridFsStorage.GridFsStorage({
-      url: configService.get<string>('MONGO_URL'),
+      url: this.configService.get<string>('MONGO_URL'),
 
       file: async (req, file) => {
-        const comment = req.query.comment ? req.query.comment.toString() : '';
-        const deleteDate = req.query.deleteDate
-          ? req.query.deleteDate.toString()
-          : '';
+        try {
+          if (+req.headers['content-length'] > 5000001) {
+            throw new HttpException(
+              'File should be less then 5mb',
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+          const comment = req.query.comment ? req.query.comment.toString() : '';
+          const deleteDate = req.query.deleteDate
+            ? req.query.deleteDate.toString()
+            : '';
 
-        const fileComment = await this.fileInfoService.createInfo({
-          comment,
-          deleteDate,
-        });
+          const fileComment = await this.fileInfoService.createInfo({
+            comment,
+            deleteDate,
+          });
 
-        const tokenModel =
-          await this.linkService.createTokensArrayAndReturnId();
+          const tokenModel =
+            await this.linkService.createTokensArrayAndReturnId();
 
-        return new Promise((resolve, reject) => {
-          const filename = file.originalname.trim();
+          return new Promise((resolve, reject) => {
+            const filename = file.originalname.trim();
 
-          const fileInfo = {
-            filename: filename,
-            metadata: {
-              fileInfo: fileComment.id,
-              tokens: tokenModel._id,
-            },
-          };
-          resolve(fileInfo);
-        });
+            const fileInfo = {
+              filename: filename,
+              metadata: {
+                fileInfo: fileComment.id,
+                tokens: tokenModel._id,
+              },
+            };
+            resolve(fileInfo);
+          });
+        } catch (e) {
+          throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+        }
       },
     });
   }

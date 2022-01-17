@@ -15,7 +15,7 @@ export class User {
   images: [Types.ObjectId];
 
   @Prop()
-  static: Types.ObjectId;
+  statistic: Types.ObjectId;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

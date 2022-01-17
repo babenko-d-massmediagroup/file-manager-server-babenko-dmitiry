@@ -1,5 +1,4 @@
 import { FilesInterceptor } from '@nestjs/platform-express';
-
 import {
   Post,
   Get,
@@ -14,111 +13,49 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { FileService } from './file.service';
 import { FileResponse } from './file.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { UserService } from 'src/user/user.service';
-import { FileInfoService } from 'src/file-info/file-info.service';
-import { LinkService } from 'src/link/link.service';
-import { StatisticService } from 'src/statistic/statistic.service';
+import { FileInfo } from 'src/file-info/file-info.entity';
 
 @Controller('image')
 export class FileController {
-  constructor(
-    private fileService: FileService,
-    private userService: UserService,
-    private fileInfoService: FileInfoService,
-    private linkService: LinkService,
-    private statisticService: StatisticService,
-  ) {}
+  constructor(private readonly fileService: FileService) {}
 
   @UseGuards(AuthGuard('jwt'))
   @Get('full-info/:fileId')
-  async getCommentsAndDeleteDate(@Param('fileId') fileId: string) {
-    const commentDeleteInfo =
-      await this.fileService.getCommentAndDeleteDateInfo(fileId);
-    const file = await this.fileService.findInfo(fileId);
-
-    const fileInfo = await this.fileInfoService.findById(file.fileInfo);
-
-    const info = {
-      comment: commentDeleteInfo.comment,
-      deleteDate: commentDeleteInfo.deleteDate,
-      filename: file.filename,
-      watchedTimes: fileInfo.watchedTimes,
-      isActiveLink: fileInfo.isActiveLink,
-      link: `http://localhost:3000/watch/${fileId}`,
-    };
-
-    return info;
+  public async getCommentsAndDeleteDate(@Param('fileId') fileId: string) {
+    return this.fileService.getFullInfo(fileId);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('plain-all')
-  async receiveFiles(@Req() req) {
-    const files = await this.fileService.receiveFiles(req.user.id);
-
-    return files;
+  public async receiveFiles(@Req() req: Request) {
+    return this.fileService.receiveFiles(req.user.id);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('count')
-  async count(@Req() req): Promise<number> {
-    const count = await this.fileService.count(req.user.id);
-
-    return count;
+  public async count(@Req() req: Request): Promise<number> {
+    return this.fileService.count(req.user.id);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Post('')
   @UseInterceptors(FilesInterceptor('file'))
-  async upload(@Req() req, @UploadedFiles() files) {
-    const response = [];
-    files &&
-      files.length &&
-      files.forEach(async (file) => {
-        const img = await this.userService.addImage(req.user.id, file.id);
-
-        const fileReponse = {
-          originalname: file.originalname,
-          encoding: file.encoding,
-          mimetype: file.mimetype,
-          id: file.id,
-          filename: file.filename,
-          metadata: file.metadata,
-          bucketName: file.bucketName,
-          chunkSize: file.chunkSize,
-          size: file.size,
-          md5: file.md5,
-          uploadDate: file.uploadDate,
-          contentType: file.contentType,
-        };
-        response.push(fileReponse);
-      });
-
-    return files[0];
+  public async upload(@Req() req: Request, @UploadedFiles() files: FileInfo[]) {
+    return this.fileService.addImage(req.user.id, files);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Get('info/:id')
-  async getFileInfo(@Param('id') id: string): Promise<FileResponse> {
-    const file = await this.fileService.findInfo(id);
-    const filestream = await this.fileService.readStream(id);
-
-    if (!filestream) {
-      throw new HttpException(
-        'An error occurred while retrieving file info',
-        HttpStatus.EXPECTATION_FAILED,
-      );
-    }
-
-    return {
-      message: 'File has been detected',
-      file: file,
-    };
+  public async getFileInfo(@Param('id') id: string): Promise<FileResponse> {
+    return this.fileService.getInfo(id);
   }
 
   @Get(':id')
-  async getFile(@Param('id') id: string, @Res() res) {
+  public async getFile(@Param('id') id: string, @Res() res) {
     const file = await this.fileService.findInfo(id);
     const filestream = await this.fileService.readStream(id);
 
@@ -134,7 +71,7 @@ export class FileController {
   }
 
   @Get('download/:id')
-  async downloadFile(@Param('id') id: string, @Res() res) {
+  public async downloadFile(@Param('id') id: string, @Res() res) {
     const file = await this.fileService.findInfo(id);
     const filestream = await this.fileService.readStream(id);
 
@@ -152,27 +89,7 @@ export class FileController {
 
   @UseGuards(AuthGuard('jwt'))
   @Delete('delete/:id')
-  async deleteFile(@Param('id') id: string, @Req() req) {
-    const file = await this.fileService.findById(id);
-    const deleteFileInUser = await this.userService.remove(req.user.id, id);
-
-    const user = await this.userService.findOneById(req.user.id);
-
-    const addToStatistic = await this.statisticService.addDeletedFiles(
-      user.static.toString(),
-    );
-
-    const deleteFileInfo = await this.fileInfoService.remove(
-      file.metadata['fileInfo'],
-    );
-    const deleteTemporaryLinks = await this.linkService.removeTemporaryLinks(
-      file.metadata['tokens'],
-    );
-    await this.fileService.deleteFile(id);
-
-    return {
-      message: 'File has been deleted',
-      file: file,
-    };
+  public async deleteFile(@Param('id') id: string, @Req() req) {
+    return this.fileService.deleteFile(id, req.user.id);
   }
 }

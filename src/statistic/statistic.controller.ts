@@ -1,5 +1,6 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Request } from 'express';
 import { StatisticService } from './statistic.service';
 
 @Controller('statistic')
@@ -8,7 +9,7 @@ export class StatisticController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get('')
-  async receiveFullStatistic(@Req() req) {
+  public async receiveFullStatistic(@Req() req: Request) {
     return this.statisticService.receiveFullStatistic(req.user.id);
   }
 }

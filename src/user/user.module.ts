@@ -7,13 +7,13 @@ import { FileInfoModule } from 'src/file-info/file-info.module';
 import { StatisticModule } from 'src/statistic/statistic.module';
 
 @Module({
-  controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService],
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     FileInfoModule,
     StatisticModule,
   ],
+  controllers: [UserController],
+  providers: [UserService],
+  exports: [UserService],
 })
 export class UserModule {}

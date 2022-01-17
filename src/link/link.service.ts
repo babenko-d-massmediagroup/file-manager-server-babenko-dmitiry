@@ -5,10 +5,12 @@ import {
   Inject,
   Injectable,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { FileService } from 'src/file/file.service';
+import { StatisticService } from 'src/statistic/statistic.service';
 import { UserService } from 'src/user/user.service';
 import { v4 as uuidv4 } from 'uuid';
 import { TemporaryLink, TemporaryLinkDocument } from './temporary-link.entity';
@@ -19,21 +21,24 @@ export class LinkService {
     @Inject(forwardRef(() => FileService))
     private readonly fileService: FileService,
     @InjectModel(TemporaryLink.name)
-    private temporaryLinkModel: Model<TemporaryLinkDocument>,
+    private readonly temporaryLinkModel: Model<TemporaryLinkDocument>,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    @Inject(forwardRef(() => StatisticService))
+    private readonly statisticService: StatisticService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
-  find(ids) {
-    return this.temporaryLinkModel.find(ids);
+  public findManyByIds(ids: string[]) {
+    return this.temporaryLinkModel.find({ _id: { $in: ids } });
   }
 
-  setPhotoLinkStatus(id: string, status: boolean) {
+  public setPhotoLinkStatus(id: string, status: boolean) {
     return this.fileService.setPhotoLinkStatus(id, status);
   }
 
-  async photoByLink(id: string) {
+  public async photoByLink(id: string) {
     const isActive = await this.fileService.isActiveLink(id);
 
     if (!isActive) {
@@ -44,9 +49,18 @@ export class LinkService {
     }
 
     await this.fileService.addWatchedTimes(id);
+
+    const file = await this.fileService.findInfo(id);
+
+    return {
+      filename: file.filename,
+      imageUrl: `${this.configService.get<string>(
+        'BACKEND_END_DOMAIN',
+      )}/image/${id}`,
+    };
   }
 
-  async generateTokens({
+  public async generateTokens({
     count,
     fileId,
     userId,
@@ -70,7 +84,7 @@ export class LinkService {
     return tokens;
   }
 
-  addTokens(tokensId: string, tokens: string[]) {
+  public addTokens(tokensId: string, tokens: string[]) {
     const params = {
       $push: {
         tokens: {
@@ -81,7 +95,7 @@ export class LinkService {
     return this.temporaryLinkModel.findByIdAndUpdate(tokensId, params);
   }
 
-  createTokensArrayAndReturnId() {
+  public createTokensArrayAndReturnId() {
     const tokenMode = new this.temporaryLinkModel({
       tokens: [],
       usedTokens: 0,
@@ -89,13 +103,13 @@ export class LinkService {
     return tokenMode.save();
   }
 
-  async getAllTemporaryTokens(userId: string, fileId: string) {
+  public async getAllTemporaryTokens(userId: string, fileId: string) {
     const user = await this.userService.findOneById(userId);
 
     const usersImages = user.images.map((item) => item.toString());
 
     if (!usersImages.includes(fileId)) {
-      throw new Error('Error here 3');
+      throw new HttpException("File doesn't exist", HttpStatus.BAD_REQUEST);
     }
 
     const tokensId = await this.fileService.getTokensId(fileId);
@@ -105,11 +119,11 @@ export class LinkService {
     return tokensArray.tokens;
   }
 
-  getPhotoIdFromToken(token: string) {
+  public getPhotoIdFromToken(token: string) {
     return this.jwtService.verify(token);
   }
 
-  async isTokenExist(fileId: string, token: string) {
+  public async isTokenExist(fileId: string, token: string) {
     const tokensId = await this.fileService.getTokensId(fileId);
     const tlModel = await this.temporaryLinkModel.findById(tokensId);
 
@@ -129,7 +143,37 @@ export class LinkService {
     return false;
   }
 
-  removeTemporaryLinks(id: string) {
+  public removeTemporaryLinks(id: string) {
     return this.temporaryLinkModel.findByIdAndRemove(id);
+  }
+
+  public async getImageFromToken(token: string) {
+    const payload = this.getPhotoIdFromToken(token);
+
+    const {
+      id,
+      fileId,
+      userId,
+    }: { id: string; fileId: string; userId: string } = payload;
+
+    const isTokenExist = await this.isTokenExist(fileId, token);
+
+    if (!isTokenExist) {
+      throw new HttpException('Token does not exist', 404);
+    }
+    const user = await this.userService.findOneById(userId);
+
+    await this.statisticService.addUsedTemporaryLinks(
+      user.statistic.toString(),
+    );
+
+    const file = await this.fileService.findInfo(fileId);
+
+    return {
+      filename: file.filename,
+      imageUrl: `${this.configService.get<string>(
+        'BACKEND_END_DOMAIN',
+      )}/image/${fileId}`,
+    };
   }
 }

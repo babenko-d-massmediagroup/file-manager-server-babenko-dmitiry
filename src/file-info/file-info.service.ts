@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ObjectID } from 'bson';
 import { Model } from 'mongoose';
 
 import { CreateInfoDto } from './file-info.dto';
@@ -8,10 +9,11 @@ import { FileInfo, FileInfoDocument } from './file-info.entity';
 @Injectable()
 export class FileInfoService {
   constructor(
-    @InjectModel(FileInfo.name) private fileInfoModel: Model<FileInfoDocument>,
+    @InjectModel(FileInfo.name)
+    private readonly fileInfoModel: Model<FileInfoDocument>,
   ) {}
 
-  createInfo(data: CreateInfoDto) {
+  public createInfo(data: CreateInfoDto) {
     return this.fileInfoModel.create({
       ...data,
       watchedTimes: 0,
@@ -19,19 +21,19 @@ export class FileInfoService {
     });
   }
 
-  getInfo(id: string) {
+  public getInfo(id: string) {
     return this.fileInfoModel.findById(id);
   }
 
-  remove(id: string) {
+  public remove(id: string) {
     return this.fileInfoModel.findByIdAndRemove(id, { new: true });
   }
 
-  findById(id: string) {
+  public findById(id: string) {
     return this.fileInfoModel.findById(id);
   }
 
-  async addWatchedTimes(id: string) {
+  public async addWatchedTimes(id: string) {
     const fileInfo = await this.fileInfoModel.findById(id);
 
     return this.fileInfoModel.findByIdAndUpdate(id, {
@@ -41,7 +43,7 @@ export class FileInfoService {
     });
   }
 
-  changeActiveLinkStatus(id: string, status: boolean) {
+  public changeActiveLinkStatus(id: string, status: boolean) {
     return this.fileInfoModel.findByIdAndUpdate(id, {
       $set: {
         isActiveLink: status,
@@ -49,7 +51,7 @@ export class FileInfoService {
     });
   }
 
-  find(ids) {
-    return this.fileInfoModel.find(ids);
+  public findManyByIds(ids: ObjectID[]) {
+    return this.fileInfoModel.find({ _id: { $in: ids } });
   }
 }

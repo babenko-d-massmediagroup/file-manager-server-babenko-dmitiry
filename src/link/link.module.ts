@@ -16,6 +16,7 @@ import { StatisticModule } from 'src/statistic/statistic.module';
     UtilsModule,
     forwardRef(() => StatisticModule),
     forwardRef(() => FileModule),
+    ConfigModule,
     MongooseModule.forFeature([
       { name: TemporaryLink.name, schema: TemporaryLinkSchema },
     ]),

@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { UserDto } from './dto/user.dto';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { UserDto } from './user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { UpdateResult } from 'mongodb';
 import { User, UserDocument } from './entities/user.entity';
 import { StatisticService } from '../statistic/statistic.service';
 
@@ -11,50 +12,79 @@ export class UserService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly statisticService: StatisticService,
   ) {}
-  async createUser(userDto: UserDto) {
-    const statistic = await this.statisticService.createStatistic({
-      deleteFiles: 0,
-      usedTemporaryLinks: 0,
-    });
+  public async createUser(userDto: UserDto): Promise<UserDocument> {
+    try {
+      const statistic = await this.statisticService.createStatistic({
+        deleteFiles: 0,
+        usedTemporaryLinks: 0,
+      });
 
-    const userSchema = new this.userModel({
-      ...userDto,
-      static: statistic._id,
-    });
+      const userSchema = new this.userModel({
+        ...userDto,
+        statistic: statistic._id,
+      });
 
-    const user = await userSchema.save();
+      const user = await userSchema.save();
 
-    if (!user) {
-      return null;
+      return user ? user : null;
+    } catch (e) {
+      throw new HttpException("Can't create user", HttpStatus.BAD_REQUEST);
     }
-
-    return user;
   }
 
-  findOneByUsername(username: string) {
-    return this.userModel.findOne({ username });
+  public async findOneByUsername(username: string): Promise<UserDocument> {
+    try {
+      const user = await this.userModel.findOne({ username });
+
+      return user ? user : null;
+    } catch (e) {
+      throw new HttpException("Can't find user", HttpStatus.BAD_REQUEST);
+    }
   }
 
-  async addImage(userId: string, imageId: string) {
-    return this.userModel.findOneAndUpdate(
-      { id: userId },
-      { $push: { images: imageId } },
-      { new: true },
-    );
+  public async addImage(
+    userId: string,
+    imageId: string,
+  ): Promise<UserDocument> {
+    try {
+      const updUser = await this.userModel.findOneAndUpdate(
+        { id: userId },
+        { $push: { images: imageId } },
+        { new: true },
+      );
+
+      return updUser ? updUser : null;
+    } catch (e) {
+      throw new HttpException(
+        "Can't add image to user",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
-  findOneById(id: string) {
-    return this.userModel.findById(id);
+  public async findOneById(id: string): Promise<UserDocument> {
+    const user = await this.userModel.findById(id);
+
+    return user ? user : null;
   }
 
-  remove(id: string, fileId: string) {
-    return this.userModel.updateOne(
-      { id },
-      {
-        $pullAll: {
-          images: [Types.ObjectId.createFromHexString(fileId)],
+  public async removeImage(
+    userId: string,
+    fileId: string,
+  ): Promise<UpdateResult> {
+    try {
+      const updUser = await this.userModel.updateOne(
+        { id: userId },
+        {
+          $pullAll: {
+            images: [Types.ObjectId.createFromHexString(fileId)],
+          },
         },
-      },
-    );
+      );
+
+      return updUser ? updUser : null;
+    } catch (e) {
+      throw new HttpException("Can't remove image", HttpStatus.BAD_REQUEST);
+    }
   }
 }

@@ -9,10 +9,12 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { MongoGridFS } from 'mongo-gridfs';
 import { Connection, Types } from 'mongoose';
 import { GridFSBucketReadStream } from 'mongodb';
-import { FileInfo } from './file.dto';
+import { FileInfo, FullInfo } from './file.dto';
 import { UserService } from '../user/user.service';
 import { FileInfoService } from '../file-info/file-info.service';
 import { LinkService } from 'src/link/link.service';
+import { StatisticService } from 'src/statistic/statistic.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class FileService {
@@ -21,60 +23,114 @@ export class FileService {
     @InjectConnection() private readonly connection: Connection,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    @Inject(forwardRef(() => StatisticService))
+    private readonly statisticService: StatisticService,
     private readonly fileInfoService: FileInfoService,
     private readonly linkService: LinkService,
+    private readonly configService: ConfigService,
   ) {
     this.fileModel = new MongoGridFS(this.connection.db, 'fs');
   }
-  findById(id: string) {
-    //!
-    return this.fileModel.findById(id);
+  public async findById(id: string) {
+    try {
+      const file = await this.fileModel.findById(id);
+
+      return file;
+    } catch (e) {
+      throw new HttpException("Can't find the file", HttpStatus.BAD_REQUEST);
+    }
   }
 
-  find(ids: Types.ObjectId[]) {
-    return this.fileModel.find({ _id: { $in: ids } });
+  public async find(ids: Types.ObjectId[]) {
+    try {
+      const file = await this.fileModel.find({ _id: { $in: ids } });
+
+      return file;
+    } catch (e) {
+      throw new HttpException("Can't find the file", HttpStatus.BAD_REQUEST);
+    }
   }
 
-  async getTempLinksCount(images: Types.ObjectId[]) {
-    const files = await this.find(images);
-    const ids = files.map((file) => file.metadata['tokens']);
+  public async getTempLinksCount(images: Types.ObjectId[]) {
+    try {
+      const files = await this.find(images);
+      const ids = files.map((file) => file.metadata['tokens']);
 
-    const tokensModel = await this.linkService.find(ids);
+      const tokensModel = await this.linkService.findManyByIds(ids);
 
-    return tokensModel.reduce((prev, cur) => prev + cur.tokens.length, 0);
+      return tokensModel.reduce((prev, cur) => prev + cur.tokens.length, 0);
+    } catch (e) {
+      throw new HttpException(
+        "Can't get temporary links",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
-  async readStream(id: string): Promise<GridFSBucketReadStream> {
+  public async readStream(id: string): Promise<GridFSBucketReadStream> {
     return await this.fileModel.readFileStream(id);
   }
 
-  async findInfo(id: string): Promise<FileInfo> {
-    const result = await this.fileModel
-      .findById(id)
-      .catch((err) => {
-        throw new HttpException('File not found', HttpStatus.NOT_FOUND);
-      })
-      .then((result) => result);
+  public async findInfo(id: string): Promise<FileInfo> {
+    try {
+      const result = await this.fileModel
+        .findById(id)
+        .catch((err) => {
+          throw new HttpException('File not found', HttpStatus.NOT_FOUND);
+        })
+        .then((result) => result);
 
-    //!check for file info
+      if (!result.metadata['fileInfo']) {
+        throw new HttpException("Can't get file info", HttpStatus.BAD_REQUEST);
+      }
 
-    const fileInfo = await this.fileInfoService.findById(
-      result.metadata['fileInfo'] as string,
-    );
-    return {
-      filename: result.filename,
-      length: result.length,
-      chunkSize: result.chunkSize,
-      md5: result.md5,
-      contentType: result.contentType,
-      //!
-      fileInfo: result.metadata['fileInfo'],
-      watchedTimes: fileInfo.watchedTimes,
-      isActiveLink: fileInfo.isActiveLink,
-    };
+      const fileInfo = await this.fileInfoService.findById(
+        result.metadata['fileInfo'] as string,
+      );
+
+      return {
+        filename: result.filename,
+        length: result.length,
+        chunkSize: result.chunkSize,
+        md5: result.md5,
+        contentType: result.contentType,
+        fileInfo: result.metadata['fileInfo'],
+        watchedTimes: fileInfo.watchedTimes,
+        isActiveLink: fileInfo.isActiveLink,
+      };
+    } catch (e) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
   }
 
-  async deleteFile(id: string) {
+  public async deleteFile(id: string, userId: string) {
+    try {
+      const file = await this.findById(id);
+
+      if (!file.metadata['fileInfo'])
+        throw new HttpException("Can't get file Info", HttpStatus.BAD_REQUEST);
+      if (!file.metadata['tokens'])
+        throw new HttpException("Can't get token", HttpStatus.BAD_REQUEST);
+
+      await this.userService.removeImage(userId, id);
+
+      const user = await this.userService.findOneById(userId);
+
+      await this.statisticService.addDeletedFiles(user.statistic.toString());
+      await this.fileInfoService.remove(file.metadata['fileInfo']);
+      await this.linkService.removeTemporaryLinks(file.metadata['tokens']);
+      await this.delete(id);
+
+      return {
+        message: 'File has been deleted',
+        file: file,
+      };
+    } catch (e) {
+      throw new HttpException(e.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  public async delete(id: string) {
     try {
       await this.connection.db
         .collection('fs.files')
@@ -90,7 +146,7 @@ export class FileService {
     }
   }
 
-  async receiveFiles(userId: string) {
+  public async receiveFiles(userId: string) {
     const user = await this.userService.findOneById(userId);
 
     if (!user) {
@@ -128,7 +184,9 @@ export class FileService {
       );
     }
 
-    //!check
+    if (!file.metadata['fileInfo']) {
+      throw new HttpException("Can't get file info", HttpStatus.BAD_REQUEST);
+    }
 
     const additionalInfo = await this.fileInfoService.getInfo(
       file.metadata['fileInfo'] as string,
@@ -200,5 +258,58 @@ export class FileService {
     } catch (e) {
       throw new Error('handle error here');
     }
+  }
+
+  public async getFullInfo(fileId: string): Promise<FullInfo> {
+    try {
+      const commentDeleteInfo = await this.getCommentAndDeleteDateInfo(fileId);
+      const file = await this.findInfo(fileId);
+      const fileInfo = await this.fileInfoService.findById(file.fileInfo);
+
+      const fullInfo: FullInfo = {
+        comment: commentDeleteInfo.comment,
+        deleteDate: commentDeleteInfo.deleteDate,
+        filename: file.filename,
+        watchedTimes: fileInfo.watchedTimes,
+        isActiveLink: fileInfo.isActiveLink,
+        link: `${this.configService.get<string>(
+          'FRONT_END_DOMAIN',
+        )}/watch/${fileId}`,
+      };
+
+      return fullInfo;
+    } catch (e) {
+      throw new HttpException(
+        "Can't retrieve full info",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  public async getInfo(id: string) {
+    const file = await this.findInfo(id);
+    const filestream = await this.readStream(id);
+
+    if (!filestream) {
+      throw new HttpException(
+        'An error occurred while retrieving file info',
+        HttpStatus.EXPECTATION_FAILED,
+      );
+    }
+
+    return {
+      message: 'File has been detected',
+      file: file,
+    };
+  }
+
+  public async addImage(userId: string, files: any[]) {
+    if (!files.length) {
+      //!x
+    }
+
+    const img = await this.userService.addImage(userId, files[0].id);
+
+    return files[0];
   }
 }
