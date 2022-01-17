@@ -1,6 +1,9 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { LoginUserDto, RegisterUserDto } from './dto/auth.dto';
-import { createHmac } from 'crypto';
+import {
+  CreateTokenPayload,
+  LoginUserDto,
+  RegisterUserDto,
+} from './dto/auth.dto';
 import { UserService } from '../user/user.service';
 import { UtilsService } from '../utils/utils.service';
 import { JwtService } from '@nestjs/jwt';
@@ -94,7 +97,7 @@ export class AuthService {
     return user;
   }
 
-  public createToken(payload: { id: string; username: string }): string {
+  public createToken(payload: CreateTokenPayload): string {
     return this.jwtService.sign(payload);
   }
 
