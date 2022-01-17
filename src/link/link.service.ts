@@ -55,7 +55,7 @@ export class LinkService {
     return {
       filename: file.filename,
       imageUrl: `${this.configService.get<string>(
-        'BACKEND_END_DOMAIN',
+        'BACK_END_DOMAIN',
       )}/image/${id}`,
     };
   }
@@ -172,7 +172,7 @@ export class LinkService {
     return {
       filename: file.filename,
       imageUrl: `${this.configService.get<string>(
-        'BACKEND_END_DOMAIN',
+        'BACK_END_DOMAIN',
       )}/image/${fileId}`,
     };
   }
